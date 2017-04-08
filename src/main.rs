@@ -30,6 +30,7 @@ fn run() -> i32 {
         .about("yet another curl")
         .args_from_usage("-c, --config=[FILE]       'Sets a custom config file'
                           -A, --user-agent=[AGENT]  'User agent'
+                          -d, --data=[DATA]         'http post data'
                               -X=[METHOD]           'http method'
                               <URL>                 'Sets the url to use'")
         .get_matches();
@@ -51,7 +52,7 @@ fn run() -> i32 {
             .add_header("Host", format!("{}:{}", host, port).as_str())
             .add_header("User-Agent", opt.user_agent)
             .add_header("Accept", "*/*")
-            .body("")
+            .body(opt.data)
             .finalize();
         let _ = stream.set_read_timeout(Some(Duration::new(5, 0)));
         if let Some(response) = read_stream(stream, req) {
@@ -75,6 +76,7 @@ fn default_port_for(scheme: &str) -> u16 {
 
 #[derive(Debug)]
 struct RurlOption<'a> {
+    data: &'a str,
     method: &'a str,
     user_agent: &'a str,
     url: &'a str,
@@ -89,8 +91,10 @@ impl<'a> RurlOption<'a> {
 fn build_option<'a>(matches: &'a clap::ArgMatches) -> RurlOption<'a> {
     let method = matches.value_of("X").unwrap_or("GET");
     let user_agent = matches.value_of("user-agent").unwrap_or("rurl/0.1.0");
+    let data = matches.value_of("data").unwrap_or("");
     let url = matches.value_of("URL");
     RurlOption {
+        data: data,
         method: method,
         user_agent: user_agent,
         url: url.unwrap()

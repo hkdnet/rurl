@@ -8,13 +8,27 @@ pub struct Request {
     body: String
 }
 impl Request {
-    fn get_headers(&self) -> Vec<HttpHeader> {
-        self.headers.to_vec()
-    }
+    // Content-Length: 3
+    // Content-Type: application/x-www-form-urlencoded
     pub fn to_string(&self) -> String {
-        let mut vec = Vec::<String>::with_capacity(self.headers.len() + 3);
+        let mut headers = self.headers.to_vec();
+        if self.body != "" {
+            headers.push(
+                HttpHeader{
+                    key: "Content-Length".to_string(),
+                    value: format!("{}", self.body.len())
+                }
+            );
+            headers.push(
+                HttpHeader{
+                    key: "Content-Type".to_string(),
+                    value: "application/x-www-form-urlencoded".to_string()
+                }
+            );
+        }
+        let mut vec = Vec::<String>::with_capacity(headers.len() + 3);
         vec.push(format!("{} {} HTTP/1.1", self.method, self.path));
-        for header in self.get_headers() {
+        for header in headers {
             vec.push(header.to_string());
         }
         vec.push("".to_string());
