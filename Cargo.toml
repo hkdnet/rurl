@@ -1,0 +1,8 @@
+[package]
+name = "rurl"
+version = "0.1.0"
+authors = ["hkdnet <hkdnet@users.noreply.github.com>"]
+
+[dependencies]
+clap = "2.23.1"
+url = "1.4.0"
