@@ -8,5 +8,6 @@ get '/' do
 end
 
 post '/' do
-  'post'
+  body = request.body.read
+  "body is #{body}"
 end
