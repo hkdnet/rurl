@@ -55,7 +55,7 @@ fn run() -> i32 {
         let _ = stream.set_read_timeout(Some(Duration::new(5, 0)));
         if let Some(response) = read_stream(stream, req) {
             println!("----------------");
-            println!("{}", response.to_string());
+            println!("{}", response);
         } else {
             println_error!("cannot build response...");
         }

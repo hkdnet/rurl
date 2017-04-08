@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug)]
 pub struct Request {
     method: String,
@@ -86,6 +88,11 @@ impl Response {
         vec.join("\n")
     }
 }
+impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
 
 #[derive(Debug)]
 pub struct ResponseBuilder {
@@ -102,8 +109,13 @@ impl ResponseBuilder {
         ResponseBuilder { protocol: "".to_string(), status: 0, message: "".to_string(), headers: vec, body: "".to_string() }
     }
     pub fn parse_response(response: &str) -> Option<Response> {
+        println!("***********************");
         let builder = ResponseBuilder::new();
         let tmp = response.splitn(2, "\r\n\r\n").collect::<Vec<&str>>();
+        println!("{}", tmp[0]);
+        println!("***********************");
+        println!("{}", tmp[1]);
+        println!("***********************");
         builder.body(tmp[1]);
         let lines = tmp[0].split("\r\n").collect::<Vec<&str>>();
         let l = lines[0];
