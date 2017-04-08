@@ -109,25 +109,19 @@ impl ResponseBuilder {
         ResponseBuilder { protocol: "".to_string(), status: 0, message: "".to_string(), headers: vec, body: "".to_string() }
     }
     pub fn parse_response(response: &str) -> Option<Response> {
-        println!("***********************");
-        let builder = ResponseBuilder::new();
         let tmp = response.splitn(2, "\r\n\r\n").collect::<Vec<&str>>();
-        println!("{}", tmp[0]);
-        println!("***********************");
-        println!("{}", tmp[1]);
-        println!("***********************");
-        builder.body(tmp[1]);
         let lines = tmp[0].split("\r\n").collect::<Vec<&str>>();
         let l = lines[0];
         let tl = l.split(" ").collect::<Vec<&str>>();
-        builder
+        let tmp_builder = ResponseBuilder::new()
+            .body(tmp[1])
             .protocol(tl[0])
             .status(tl[1])
             .message(tl[2]);
-        for line in lines[1..].iter() {
+        let builder = lines[1..].iter().fold(tmp_builder, |acc, line| {
             let t = line.splitn(2, ": ").collect::<Vec<&str>>();
-            builder.add_header(t[0], t[1]);
-        }
+            acc.add_header(t[0], t[1])
+        });
         let result = builder.finalize();
         Some(result)
     }
