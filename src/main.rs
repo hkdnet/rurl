@@ -28,9 +28,10 @@ fn run() -> i32 {
         .version("0.1.0")
         .author("hkdnet")
         .about("yet another curl")
-        .args_from_usage("-c, --config=[FILE] 'Sets a custom config file'
-                              -X=[METHOD]          'http method'
-                              <URL>              'Sets the url to use'")
+        .args_from_usage("-c, --config=[FILE]       'Sets a custom config file'
+                          -A, --user-agent=[AGENT]  'User agent'
+                              -X=[METHOD]           'http method'
+                              <URL>                 'Sets the url to use'")
         .get_matches();
     let opt = build_option(&matches);
     let url_result = opt.get_url();
@@ -48,7 +49,7 @@ fn run() -> i32 {
             .method(opt.method)
             .path(url.path())
             .add_header("Host", format!("{}:{}", host, port).as_str())
-            .add_header("User-Agent", "rurl/1.0")
+            .add_header("User-Agent", opt.user_agent)
             .add_header("Accept", "*/*")
             .body("")
             .finalize();
@@ -74,8 +75,9 @@ fn default_port_for(scheme: &str) -> u16 {
 
 #[derive(Debug)]
 struct RurlOption<'a> {
-    url: &'a str,
     method: &'a str,
+    user_agent: &'a str,
+    url: &'a str,
 }
 
 impl<'a> RurlOption<'a> {
@@ -86,8 +88,13 @@ impl<'a> RurlOption<'a> {
 
 fn build_option<'a>(matches: &'a clap::ArgMatches) -> RurlOption<'a> {
     let method = matches.value_of("X").unwrap_or("GET");
+    let user_agent = matches.value_of("user-agent").unwrap_or("rurl/0.1.0");
     let url = matches.value_of("URL");
-    RurlOption { url: url.unwrap(), method: method }
+    RurlOption {
+        method: method,
+        user_agent: user_agent,
+        url: url.unwrap()
+    }
 }
 
 fn read_stream(mut stream: std::net::TcpStream, request: Request)-> Option<Response> {
