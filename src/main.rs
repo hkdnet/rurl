@@ -51,7 +51,12 @@ fn run() -> i32 {
             .body("")
             .finalize();
         let _ = stream.set_read_timeout(Some(Duration::new(5, 0)));
-        read_stream(stream, req);
+        if let Some(response) = read_stream(stream, req) {
+            println!("----------------");
+            println!("{}", response.to_string());
+        } else {
+            println_error!("cannot build response...");
+        }
     } else {
         println!("Couldn't connect to server...");
     }
@@ -151,22 +156,141 @@ fn build_option<'a>(matches: &'a clap::ArgMatches) -> RurlOption<'a> {
     RurlOption { url: url.unwrap(), method: method }
 }
 
-fn read_stream(mut stream: std::net::TcpStream, request: Request) {
+fn read_stream(mut stream: std::net::TcpStream, request: Request)-> Option<Response> {
     let mut buf = [0u8; 1000];
     let req_str = request.to_string();
     println!("{}", req_str);
     let write_result = stream.write(req_str.as_bytes());
     if let Err(err) = write_result {
         println_error!("{}", err);
-        return
+        return None
     }
     let read_result = stream.read(&mut buf[..]);
     if let Err(err) = read_result {
         println_error!("{}", err);
-        return
+        return None
     }
     let s = std::str::from_utf8(&buf);
-    println!("{}", s.unwrap());
+    let raw_response = s.unwrap();
+    ResponseBuilder::parse_response(raw_response)
+}
+
+#[derive(Debug)]
+struct Response {
+    protocol: String,
+    status: i32,
+    message: String,
+    headers: Vec<HttpHeader>,
+    body: String
+}
+impl Response {
+    fn to_string(&self) -> String {
+        let mut vec = Vec::<String>::with_capacity(self.headers.len() + 3);
+        vec.push(format!("{} {} {}", self.protocol, self.status, self.message));
+        for header in self.headers.to_vec() {
+            vec.push(header.to_string());
+        }
+        vec.push("".to_string());
+        vec.push(self.body.to_string());
+        vec.join("\n")
+    }
+}
+
+#[derive(Debug)]
+struct ResponseBuilder {
+    protocol: String,
+    status: i32,
+    message: String,
+    headers: Vec<HttpHeader>,
+    body: String
+}
+
+impl ResponseBuilder {
+    fn new() -> ResponseBuilder {
+        let vec = Vec::<HttpHeader>::with_capacity(4);
+        ResponseBuilder { protocol: "".to_string(), status: 0, message: "".to_string(), headers: vec, body: "".to_string() }
+    }
+    fn parse_response(response: &str) -> Option<Response> {
+        let builder = ResponseBuilder::new();
+        let tmp = response.splitn(2, "\r\n\r\n").collect::<Vec<&str>>();
+        builder.body(tmp[1]);
+        let lines = tmp[0].split("\r\n").collect::<Vec<&str>>();
+        let l = lines[0];
+        let tl = l.split(" ").collect::<Vec<&str>>();
+        builder
+            .protocol(tl[0])
+            .status(tl[1])
+            .message(tl[2]);
+        for line in lines[1..].iter() {
+            let t = line.splitn(2, ": ").collect::<Vec<&str>>();
+            builder.add_header(t[0], t[1]);
+        }
+        let result = builder.finalize();
+        Some(result)
+    }
+    fn protocol(&self, protocol: &str)-> ResponseBuilder {
+        ResponseBuilder{ 
+            protocol: protocol.to_string(), status: self.status, message: self.message.to_string(),
+            headers: self.headers.to_vec(), body: self.body.to_string() 
+        }
+    }
+    fn status(&self, status: &str)-> ResponseBuilder {
+        ResponseBuilder{ 
+            protocol: self.protocol.to_string(), status: status.parse::<i32>().unwrap(), message: self.message.to_string(),
+            headers: self.headers.to_vec(), body: self.body.to_string() 
+        }
+    }
+    fn message(&self, message: &str)-> ResponseBuilder {
+        ResponseBuilder{ 
+            protocol: self.protocol.to_string(), status: self.status, message: message.to_string(),
+            headers: self.headers.to_vec(), body: self.body.to_string() 
+        }
+    }
+    fn add_header(&self, key: &str, value: &str) -> ResponseBuilder {
+        let header = HttpHeader{ key: key.to_string(), value: value.to_string() };
+        let mut vec = self.headers.to_vec();
+        vec.push(header);
+        ResponseBuilder {
+            protocol: self.protocol.to_string(), status: self.status, message: self.message.to_string(),
+            headers: vec, body: self.body.to_string()
+        }
+    }
+    fn body(&self, body: &str)-> ResponseBuilder {
+        ResponseBuilder{ 
+            protocol: self.protocol.to_string(), status: self.status, message: self.message.to_string(),
+            headers: self.headers.to_vec(), body: body.to_string() 
+        }
+    }
+    fn finalize(&self)-> Response {
+        Response{ 
+            protocol: self.protocol.to_string(), status: self.status, message: self.message.to_string(),
+            headers: self.headers.to_vec(), body: self.body.to_string() 
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let mut headers = Vec::<HttpHeader>::new();
+        headers.push(HttpHeader{key: "KEY".to_string(), value: "value".to_string()});
+        let res = Response {
+            headers: headers,
+            protocol: "HTTP/1.1".to_string(),
+            status: 200,
+            message: "OK".to_string(),
+            body: "body".to_string()
+        };
+        let expected = "HTTP/1.1 200 OK
+KEY: value
+
+body";
+        assert_eq!(expected, res.to_string());
+
+    }
 }
 
 // > GET /status HTTP/1.1
