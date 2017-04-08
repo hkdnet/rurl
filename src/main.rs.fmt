@@ -167,8 +167,8 @@ fn read_stream(mut stream: std::net::TcpStream, request: Request) {
         println_error!("{}", err);
         return
     }
-    let s = std::str::from_utf8(&buf);
-    println!("{}", s.unwrap());
+        let s = std::str::from_utf8(&buf);
+        println!("{}", s.unwrap());
 }
 
 // > GET /status HTTP/1.1
