@@ -27,6 +27,7 @@ fn run() -> i32 {
         .author("hkdnet")
         .about("yet another curl")
         .args_from_usage("-c, --config=[FILE] 'Sets a custom config file'
+                              -X=[METHOD]          'http method'
                               <URL>              'Sets the url to use'")
         .get_matches();
     let opt = build_option(&matches);
@@ -42,7 +43,7 @@ fn run() -> i32 {
     let host_str = format!("{}:{}", host, port);
     if let Ok(stream) = TcpStream::connect(host_str) {
         let req = RequestBuilder::new()
-            .method("GET")
+            .method(opt.method)
             .path(url.path())
             .add_header("Host", format!("{}:{}", host, port).as_str())
             .add_header("User-Agent", "rurl/1.0")
@@ -67,6 +68,7 @@ fn default_port_for(scheme: &str) -> u16 {
 #[derive(Debug)]
 struct RurlOption<'a> {
     url: &'a str,
+    method: &'a str,
 }
 
 impl<'a> RurlOption<'a> {
@@ -144,8 +146,9 @@ impl HttpHeader {
 }
 
 fn build_option<'a>(matches: &'a clap::ArgMatches) -> RurlOption<'a> {
+    let method = matches.value_of("X").unwrap_or("GET");
     let url = matches.value_of("URL");
-    RurlOption { url: url.unwrap() }
+    RurlOption { url: url.unwrap(), method: method }
 }
 
 fn read_stream(mut stream: std::net::TcpStream, request: Request) {

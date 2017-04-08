@@ -4,6 +4,9 @@ require 'logger'
 logger = Logger.new(STDOUT)
 
 get '/' do
-  logger.info('Access to /')
-  'Hello world!'
+  'get'
+end
+
+post '/' do
+  'post'
 end
