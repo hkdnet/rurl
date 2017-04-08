@@ -47,6 +47,7 @@ fn run() -> i32 {
             .add_header("Host", format!("{}:{}", host, port).as_str())
             .add_header("User-Agent", "rurl/1.0")
             .add_header("Accept", "*/*")
+            .body("")
             .finalize();
         let _ = stream.set_read_timeout(Some(Duration::new(5, 0)));
         read_stream(stream, req);
@@ -78,19 +79,21 @@ impl<'a> RurlOption<'a> {
 struct Request {
     method: String,
     path: String,
-    headers: Vec<HttpHeader>
+    headers: Vec<HttpHeader>,
+    body: String
 }
 impl Request {
     fn get_headers(&self) -> Vec<HttpHeader> {
         self.headers.to_vec()
     }
     fn to_string(&self) -> String {
-        let mut vec = Vec::<String>::with_capacity(self.headers.len() + 2);
+        let mut vec = Vec::<String>::with_capacity(self.headers.len() + 3);
         vec.push(format!("{} {} HTTP/1.1", self.method, self.path));
         for header in self.get_headers() {
             vec.push(header.to_string());
         }
         vec.push("".to_string());
+        vec.push(self.body.to_string());
         vec.join("\r\n")
     }
 }
@@ -98,27 +101,31 @@ impl Request {
 struct RequestBuilder {
     method: String,
     path: String,
-    headers: Vec<HttpHeader>
+    headers: Vec<HttpHeader>,
+    body: String
 }
 impl RequestBuilder {
     fn new() -> RequestBuilder {
         let vec = Vec::<HttpHeader>::with_capacity(4);
-        RequestBuilder { headers: vec, method: "".to_string(), path: "".to_string() }
+        RequestBuilder { headers: vec, method: "".to_string(), path: "".to_string(), body: "".to_string() }
     }
     fn method(&self, method: &str) -> RequestBuilder {
-        RequestBuilder { headers: self.headers.to_vec(), method: method.to_string(), path: self.path.to_string() }
+        RequestBuilder { headers: self.headers.to_vec(), method: method.to_string(), path: self.path.to_string(), body: self.body.to_string()}
     }
     fn path(&self, path: &str) -> RequestBuilder {
-        RequestBuilder { headers: self.headers.to_vec(), method: self.method.to_string(), path: path.to_string() }
+        RequestBuilder { headers: self.headers.to_vec(), method: self.method.to_string(), path: path.to_string(), body: self.body.to_string()}
     }
     fn add_header(&self, key: &str, value: &str) -> RequestBuilder {
         let header = HttpHeader::new(key, value);
         let mut new_headers = self.headers.to_vec();
         new_headers.push(header);
-        RequestBuilder { headers: new_headers , method: self.method.to_string(), path: self.path.to_string() }
+        RequestBuilder { headers: new_headers , method: self.method.to_string(), path: self.path.to_string(), body: self.body.to_string()}
+    }
+    fn body(&self, body: &str) -> RequestBuilder {
+        RequestBuilder { headers: self.headers.to_vec(), method: self.method.to_string(), path: self.path.to_string(), body: body.to_string() }
     }
     fn finalize(&self) -> Request {
-        Request { headers: self.headers.to_vec(), method: self.method.to_string(), path: self.path.to_string() }
+        Request { headers: self.headers.to_vec(), method: self.method.to_string(), path: self.path.to_string(), body: self.body.to_string() }
     }
 }
 
