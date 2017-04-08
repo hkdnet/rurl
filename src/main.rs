@@ -159,9 +159,7 @@ fn read_stream(mut stream: std::net::TcpStream, request: Request) {
     if let Err(err) = write_result {
         println_error!("{}", err);
         return
-    } else {
-        println!("write ok");
-    } 
+    }
     let read_result = stream.read(&mut buf[..]);
     if let Err(err) = read_result {
         println_error!("{}", err);
